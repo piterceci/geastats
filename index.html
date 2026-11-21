@@ -183,6 +183,20 @@ tr.tot td{font-weight:700}
 .acts button.a-reb{background:#2f5fa8}
 .acts button.a-ok2{background:#1f7a52}.acts button.a-ko2{background:#b5532b}
 .acts button.a-st{background:#1f8f86}.acts button.a-foul{background:#b8860b}.acts button.a-fs{background:#7b4fc9}
+
+.acts button.a-rebd{background:#5ec4f0;color:#0e1420!important}
+html.lock,html.lock body{overflow:hidden;overscroll-behavior:none}
+.sheetbg{overscroll-behavior:contain;touch-action:none}
+.sheet{overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch}
+.urbar{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem}
+.urbar .btn{width:100%;min-height:50px}
+.btn.redo{background:#e9b500;color:#111}
+.bigclk{display:block;width:100%;min-height:64px;font-size:1.25rem;margin-bottom:.6rem;color:#fff}
+.bigclk.go{background:var(--made)}.bigclk.stop{background:var(--miss)}
+.postrow .pst-att{background:#8fb1e6;color:#0e1420;border-color:#8fb1e6}
+.postrow .pst-dif{background:#e79a8b;color:#0e1420;border-color:#e79a8b}
+.postrow .pst-pan{background:#5b6475;color:#fff;border-color:#5b6475}
+.postrow .chip{opacity:.6}.postrow .chip.on{opacity:1;box-shadow:0 0 0 3px #fff inset}
 @media print{.top,.noprint{display:none!important}body{background:#fff}.panel{border:0;break-inside:avoid}body.print-report .layout2{grid-template-columns:1fr 1fr}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -463,14 +477,15 @@ function viewLive(){
   const sc=g.paper&&g.score?g.score:score(S.ev);const q=g.q||1;
   const tf=t=>S.ev.filter(e=>e.k==='ff'&&e.team===t&&(q<=4?e.q===q:e.q>=5)).length;
   h+=`<div class="board"><div><div class="t">${esc(S.settings.team||'Noi')}</div><div class="s">${sc.N}</div><div class="fouls">Falli ${qName(q)}: ${tf('N')}/4${tf('A')>=4?' <span class="bonus" title="Gli avversari hanno 4 falli nel periodo: ogni fallo vale tiri liberi per noi">BONUS</span>':''}</div></div>
-  <div class="mid">${g.noClock?'<div class="t">Senza cronometro</div>':`<button class="clock" id="clk" data-a="clkEdit" aria-label="Modifica cronometro" title="Tocca per correggere il tempo">${mmss(curClock(g))}</button><div class="row" style="justify-content:center;gap:.3rem"><button class="btn" style="min-height:40px;padding:.2rem .9rem;background:${g.run?'var(--miss)':'var(--made)'};color:#fff" data-a="clk">${g.run?'Ferma':'Avvia'}</button><button class="btn" style="min-height:40px;padding:.2rem .7rem;background:#26324a;color:#fff" data-a="clkEdit" title="Correggi il tempo se il cronometro è rimasto indietro">Imposta tempo</button></div>`}
+  <div class="mid">${g.noClock?'<div class="t">Senza cronometro</div><button class="btn" style="min-height:40px;padding:.2rem .7rem;background:#26324a;color:#fff" data-a="noClock">Usa cronometro</button>':`<button class="clock" id="clk" data-a="clkEdit" aria-label="Modifica cronometro" title="Tocca per correggere il tempo">${mmss(curClock(g))}</button><div class="row" style="justify-content:center;gap:.3rem"><button class="btn" style="min-height:40px;padding:.2rem .7rem;background:#26324a;color:#fff" data-a="noClock">Senza cronometro</button><button class="btn" style="min-height:40px;padding:.2rem .7rem;background:#26324a;color:#fff" data-a="clkEdit" title="Correggi il tempo se il cronometro è rimasto indietro">Imposta tempo</button></div>`}
   <div class="oncourt"><div><b>In campo noi</b> ${((g.lnN||[]).slice().sort((a,b)=>numOf('N',a)-numOf('N',b)).map(x=>esc(pShort(x)))).join(' ')||'–'}</div><div><b>In campo avv</b> ${((g.lnA||[]).slice().sort((a,b)=>numOf('A',a)-numOf('A',b)).map(x=>'#'+esc(x))).join(' ')||'–'}</div></div>
   <div class="oncourt">${partials(g)}</div>
   <div class="qbar">${Array.from({length:Math.max(4,q)},(_,i)=>i+1).map(i=>`<button data-a="q" data-v="${i}" class="${i===q?'on':''}" title="${i<=4?i+'° quarto':'Supplementare '+(i-4)}">${qName(i)}</button>`).join('')}<button data-a="q" data-v="${q>=4?q+1:'ot'}" title="Aggiungi un supplementare da 5 minuti (dopo il 4° quarto)" style="${q>=4?'':'opacity:.55'}">+ Suppl.</button></div>
   <div class="qbar">${['N','A'].map(t=>{const u=toUsed(t,q),mx=toMax(q);return `<button data-a="to" data-v="${t}" title="Registra un time-out ${t==='N'?'nostro':'avversario'}" style="${u>=mx?'opacity:.5':''}">TO ${t==='N'?'noi':'avv'} ${u}/${mx}</button>`}).join('')}</div></div>
   <div class="right"><div class="t">${esc(g.type==='allenamento'?(g.opp||'Squadra B'):(g.opp||'Avversari'))}</div><div class="s">${sc.A}</div><div class="fouls">Falli ${qName(q)}: ${tf('A')}/4${tf('N')>=4?' <span class="bonus" title="Abbiamo 4 falli nel periodo: ogni fallo vale tiri liberi per loro">BONUS</span>':''}</div></div></div>`;
-  h+=`<div class="row noprint" style="margin-bottom:.5rem"><button class="btn danger" data-a="undo" ${myLast()?'':'disabled style="opacity:.5"'} title="Annulla l'ultimo evento inserito da questo dispositivo">↶ Annulla il mio ultimo</button> <button class="btn" data-a="redo" ${redoGet(S.gameId).length?'':'disabled style="opacity:.5"'}>↷ Rifai (${redoGet(S.gameId).length})</button><span class="grow"></span><button class="chip" data-a="noClock">${g.noClock?'Usa cronometro':'Lavora senza cronometro'}</button></div>`;
-  h+=`<div class="row noprint postrow" style="margin-bottom:.5rem;gap:.3rem"><span class="muted small">Postazione:</span>${Object.entries(POST).map(([k,o])=>`<button class="chip ${S.post===k?'on':''}" data-a="post" data-v="${k}" title="${o.d}">${o.n}</button>`).join('')}</div>`;
+  h+=`<div class="urbar noprint"><button class="btn danger" data-a="undo" ${myLast()?'':'disabled style="opacity:.5"'}>↶ Annulla</button><button class="btn redo" data-a="redo" ${redoGet(S.gameId).length?'':'disabled style="opacity:.5"'}>↷ Rifai (${redoGet(S.gameId).length})</button></div>`;
+  if(!g.noClock&&(!S.post||['pan','tutto'].includes(S.post)))h+=`<button class="btn bigclk noprint ${g.run?'stop':'go'}" data-a="clk">${g.run?'■ Stop cronometro':'▶ Start cronometro'}</button>`;
+  h+=`<div class="row noprint postrow" style="margin-bottom:.5rem;gap:.3rem">${Object.entries(POST).map(([k,o])=>`<button class="chip pst-${k} ${S.post===k?'on':''}" data-a="post" data-v="${k}" title="${o.d}">${o.n}</button>`).join('')}</div>`;
   if(!S.post){h+=`<div class="panel"><h3 style="margin-top:0">Scegli la tua postazione</h3><p class="small">Con tre persone ognuna sceglie la sua sul proprio dispositivo: i dati si uniscono da soli.</p>${Object.entries(POST).map(([k,o])=>`<button class="btn" style="display:block;width:100%;text-align:left;margin:.4rem 0" data-a="post" data-v="${k}"><b>${o.n}</b><br><span style="font-weight:400;font-size:.9rem">${o.d}</span></button>`).join('')}</div>`;return h}
   const TABS=S.post==='att'?[['tiri','Tiri'],['registro','Registro'],['live','Analisi live']]:S.post==='dif'?[['tiri','Tiri'],['azioni','Falli e liberi'],['cambi','Marcature'],['registro','Registro']]:S.post==='pan'?[['azioni','Azioni'],['cambi','Cambi'],['registro','Registro'],['live','Analisi live']]:[['tiri','Tiri'],['azioni','Azioni'],['cambi','Cambi e difese'],['registro','Registro'],['live','Analisi live']];
   if(!TABS.some(t=>t[0]===S.tab))S.tab=TABS[0][0];
@@ -493,8 +508,8 @@ const numOf=(t,x)=>t==='N'?NK((pl(x)||{}).n):NK(x);
 function actPanel(g,t){const on=(t==='N'?(g.lnN||[]):(g.lnA||[])).slice().sort((a,b)=>numOf(t,a)-numOf(t,b));
   const all=t==='N'?sortedPlayers().map(p=>p.id):oppRoster(g).map(o=>o.n);
   const bench=all.filter(x=>!on.includes(x));
-  const btns=t==='N'?[['ftm','TL ✓','a-ok'],['ftx','TL ✗','a-ko'],['rd','Rimb D','a-reb'],['ro','Rimb O','a-reb'],['pr','Recup','a-ok2'],['pp','Persa','a-ko2'],['st','Stopp','a-st'],['ff','Fallo','a-foul'],['fs','F. sub','a-fs']]
-                    :[['ftm','TL ✓','a-ok'],['ftx','TL ✗','a-ko'],['rd','Rimb D','a-reb'],['ro','Rimb O','a-reb'],['pr','Recup','a-ok2'],['pp','Persa','a-ko2'],['ff','Fallo','a-foul']];
+  const btns=t==='N'?[['ftm','TL ✓','a-ok'],['ftx','TL ✗','a-ko'],['rd','Rimb D','a-rebd'],['ro','Rimb O','a-reb'],['pr','Recup','a-ok2'],['pp','Persa','a-ko2'],['st','Stopp','a-st'],['ff','Fallo','a-foul'],['fs','F. sub','a-fs']]
+                    :[['ftm','TL ✓','a-ok'],['ftx','TL ✗','a-ko'],['rd','Rimb D','a-rebd'],['ro','Rimb O','a-reb'],['pr','Recup','a-ok2'],['pp','Persa','a-ko2'],['ff','Fallo','a-foul']];
   const fc=x=>S.ev.filter(e=>e.k==='ff'&&e.team===t&&e.p===x).length;
   const row=x=>`<div class="prow" ${fc(x)>=4?'style="background:rgba(195,64,47,.18);border-radius:6px"':''}><div class="nm">${t==='N'?esc(pShort(x)):esc(oName(g,x))}${fc(x)?` <span class="tag" style="${fc(x)>=4?'background:var(--miss);color:#fff':''}">${fc(x)}F</span>`:''}</div><div class="acts">${btns.map(([k,l,c],i)=>`<button style="grid-column:span ${i<4?15:60/(btns.length-4)}" class="${c||''}" data-a="ev" data-t="${t}" data-k="${k}" data-p="${esc(x)}">${l}</button>`).join('')}</div></div>`;
   const sb=(S.benchOpen||{})[t];
@@ -559,7 +574,7 @@ function clockStop(){const g=S.game;if(!g||!g.run)return;patchGame({clk:Math.rou
 
 /* ---------- foglio (pannello a comparsa) ---------- */
 function renderSheet(){
-  const el=$('#sheet');const sh=S.sheet;if(!sh){el.innerHTML='';return}
+  const el=$('#sheet');const sh=S.sheet;document.documentElement.classList.toggle('lock',!!sh);if(!sh){el.innerHTML='';return}
   const keepFocus=document.activeElement&&document.activeElement.closest&&document.activeElement.closest('#sheet')&&document.activeElement.dataset.keep;
   if(keepFocus)return;
   let h='';
