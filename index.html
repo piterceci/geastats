@@ -137,9 +137,10 @@ tr.tot td{font-weight:700}
 
 /* v2 mobile + colori */
 .esito{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:.4rem 0 .6rem}
-.esito .big{min-height:64px;border-radius:12px;font:700 1.25rem "Barlow Condensed",sans-serif;border:2px solid;background:transparent}
-.esito .made{border-color:var(--made);color:var(--made)} .esito .miss{border-color:var(--miss);color:var(--miss)}
-.esito .made.on{background:var(--made);color:#fff} .esito .miss.on{background:var(--miss);color:#fff}
+.esito .big{min-height:60px;border-radius:12px;font:inherit;font-weight:700;font-size:1.1rem;border:0;color:#fff;opacity:.55}
+.esito .big.on{opacity:1;box-shadow:0 0 0 3px #fff inset}
+.esito .made{background:var(--made)} .esito .miss{background:var(--miss)}
+
 .sg{border-left:4px solid var(--c,#888);padding:.35rem 0 .35rem .6rem;margin:.5rem 0}
 .sg .lab{color:var(--c);font-weight:700}
 .sg .chip.on{background:var(--c);border-color:var(--c);color:#0e1420}
@@ -171,6 +172,17 @@ tr.tot td{font-weight:700}
  .tabs .chip,.postrow .chip{flex:0 0 auto;min-height:40px}
  .tabs .kbd{display:none}
 }
+
+.sheet,.sheet *{font-family:inherit}
+.sheet h3{font:inherit;font-weight:700;font-size:1.1rem}
+.sg .chip{background:color-mix(in srgb,var(--c) 22%,var(--chip));border-color:transparent;font-weight:600}
+.sg .chip.on{background:var(--c);color:#0e1420;box-shadow:0 0 0 2px #fff inset}
+.acts{display:grid!important;grid-template-columns:repeat(60,1fr)!important;gap:.3rem}
+.acts button{min-width:0!important;border:0!important;color:#fff!important;font-weight:700}
+.acts button.a-ok{background:#2e9d6a}.acts button.a-ko{background:#d24a37}
+.acts button.a-reb{background:#2f5fa8}
+.acts button.a-ok2{background:#1f7a52}.acts button.a-ko2{background:#b5532b}
+.acts button.a-st{background:#1f8f86}.acts button.a-foul{background:#b8860b}.acts button.a-fs{background:#7b4fc9}
 @media print{.top,.noprint{display:none!important}body{background:#fff}.panel{border:0;break-inside:avoid}body.print-report .layout2{grid-template-columns:1fr 1fr}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -248,7 +260,7 @@ const S={view:'live',tab:'tiri',side:'N',players:[],games:[],settings:{schemi:[]
 const ZONES={ra:['Sotto canestro',75,21],pt:['Pitturato',75,44],mbl:['Media fondo sx',27,14],mel:['Media 45° sx',33,50],mc:['Media centro',75,68],mer:['Media 45° dx',117,50],mbr:['Media fondo dx',123,14],
   c3l:['Angolo 3 sx',4.5,13],w3l:['Ala 3 sx',17,78],t3:['Centro 3',75,100],w3r:['Ala 3 dx',133,78],c3r:['Angolo 3 dx',145.5,13]};
 const ORIG={solo:'Da solo',pass:'Su passaggio',cp:'Contropiede',rim:'Secondo tiro',sch:'Da schema'};
-const ORIG_NEW=['solo','pass','cp','rim'];
+const ORIG_NEW=['solo','pass','rim'];
 function zoneOf(x,y){const dx=x-75,dy=y-15.75,d=Math.hypot(dx,dy);
   const three=x<9||x>141||(y>29.9&&d>67.5);const ang=Math.atan2(dx,Math.max(dy,.01))*180/Math.PI;
   if(three){if(y<=29.9)return dx<0?'c3l':'c3r';if(Math.abs(ang)<22)return 't3';return dx<0?'w3l':'w3r'}
@@ -346,11 +358,14 @@ async function init(){
 }
 function bootData(){
   store.watch('players',a=>{S.players=a;render()});
-  store.watch('games',a=>{S.cache={};S.games=a.filter(g=>!g.demo).sort((x,y)=>(x.summary?1:0)-(y.summary?1:0)||(x.date||'').localeCompare(y.date||''));if(!S.gameId){const live=S.games.find(g=>g.status==='in corso');if(live)selectGame(live.id)}render()});
+  store.watch('games',a=>{S.cache={};S.games=a.filter(g=>!g.demo).sort((x,y)=>(x.summary?1:0)-(y.summary?1:0)||(x.date||'').localeCompare(y.date||''));if(!S.gameId){const live=S.games.find(g=>g.status==='in corso')||nextGame();if(live)selectGame(live.id)}render()});
   store.watchDoc('meta/settings',s=>{S.settings={schemi:[],schemiDif:[],staff:[],team:'Noi',...(s||{})};render()});
   render();
   setInterval(()=>{const el=$('#clk');if(el&&S.game)el.textContent=mmss(curClock(S.game));if(S.game&&S.game.run&&curClock(S.game)<=0)clockStop()},400);
 }
+const today=()=>new Date().toISOString().slice(0,10);
+function nextGame(){return S.games.filter(g=>g.type!=='allenamento'&&(g.date||'')>=today()).sort((a,b)=>a.date.localeCompare(b.date))[0]}
+function gamesOrdered(){const t=today();const up=S.games.filter(g=>(g.date||'')>=t).sort((a,b)=>(a.date||'').localeCompare(b.date||''));const past=S.games.filter(g=>(g.date||'')<t).sort((a,b)=>(b.date||'').localeCompare(a.date||''));return up.concat(past)}
 function selectGame(id){
   S.unsub.forEach(u=>u&&u());S.unsub=[];S.gameId=id;S.game=null;S.ev=[];S.box=[];
   if(!id){render();return}
@@ -443,7 +458,7 @@ function myLast(){for(let i=S.ev.length-1;i>=0;i--){if(S.ev[i].dev===DEV)return 
 function toMax(q){return q<=2?2:q<=4?3:1}
 function toUsed(t,q){return S.ev.filter(e=>e.k==='to'&&e.team===t&&(q<=2?e.q<=2:q<=4?e.q>=3&&e.q<=4:e.q===q)).length}
 function viewLive(){
-  let h=`<div class="row noprint" style="margin-bottom:.6rem"><select data-a="gsel" class="grow" aria-label="Partita"><option value="">Scegli partita o allenamento…</option>${S.games.map(g=>`<option value="${g.id}" ${g.id===S.gameId?'selected':''}>${esc(g.date||'')} ${g.type==='allenamento'?'Allenamento':(g.home?'vs ':'@ ')+esc(g.opp||'')}</option>`).join('')}</select><button class="btn ghost" data-a="nav" data-v="partite">Nuova</button></div>`;
+  let h=`<div class="row noprint" style="margin-bottom:.6rem"><select data-a="gsel" class="grow" aria-label="Partita"><option value="">Scegli partita o allenamento…</option>${gamesOrdered().map(g=>`<option value="${g.id}" ${g.id===S.gameId?'selected':''}>${esc(g.date||'')} ${g.type==='allenamento'?'Allenamento':(g.home?'vs ':'@ ')+esc(g.opp||'')}</option>`).join('')}</select><button class="btn ghost" data-a="nav" data-v="partite">Nuova</button></div>`;
   const g=S.game;if(!g)return h+`<div class="panel empty">Scegli una partita sopra oppure creane una in Partite.</div>`;
   const sc=g.paper&&g.score?g.score:score(S.ev);const q=g.q||1;
   const tf=t=>S.ev.filter(e=>e.k==='ff'&&e.team===t&&(q<=4?e.q===q:e.q>=5)).length;
@@ -481,7 +496,7 @@ function actPanel(g,t){const on=(t==='N'?(g.lnN||[]):(g.lnA||[])).slice().sort((
   const btns=t==='N'?[['ftm','TL ✓','a-ok'],['ftx','TL ✗','a-ko'],['rd','Rimb D','a-reb'],['ro','Rimb O','a-reb'],['pr','Recup','a-ok2'],['pp','Persa','a-ko2'],['st','Stopp','a-st'],['ff','Fallo','a-foul'],['fs','F. sub','a-fs']]
                     :[['ftm','TL ✓','a-ok'],['ftx','TL ✗','a-ko'],['rd','Rimb D','a-reb'],['ro','Rimb O','a-reb'],['pr','Recup','a-ok2'],['pp','Persa','a-ko2'],['ff','Fallo','a-foul']];
   const fc=x=>S.ev.filter(e=>e.k==='ff'&&e.team===t&&e.p===x).length;
-  const row=x=>`<div class="prow" ${fc(x)>=4?'style="background:rgba(195,64,47,.18);border-radius:6px"':''}><div class="nm">${t==='N'?esc(pShort(x)):esc(oName(g,x))}${fc(x)?` <span class="tag" style="${fc(x)>=4?'background:var(--miss);color:#fff':''}">${fc(x)}F</span>`:''}</div><div class="acts">${btns.map(([k,l,c])=>`<button class="${c||''}" data-a="ev" data-t="${t}" data-k="${k}" data-p="${esc(x)}">${l}</button>`).join('')}</div></div>`;
+  const row=x=>`<div class="prow" ${fc(x)>=4?'style="background:rgba(195,64,47,.18);border-radius:6px"':''}><div class="nm">${t==='N'?esc(pShort(x)):esc(oName(g,x))}${fc(x)?` <span class="tag" style="${fc(x)>=4?'background:var(--miss);color:#fff':''}">${fc(x)}F</span>`:''}</div><div class="acts">${btns.map(([k,l,c],i)=>`<button style="grid-column:span ${i<4?15:60/(btns.length-4)}" class="${c||''}" data-a="ev" data-t="${t}" data-k="${k}" data-p="${esc(x)}">${l}</button>`).join('')}</div></div>`;
   const sb=(S.benchOpen||{})[t];
   return `<div class="panel" ${t==='A'?'style="border-color:var(--miss)"':''}><div class="row" style="margin-bottom:.4rem"><h3 class="grow" style="margin:0">${t==='N'?esc(S.settings.team||'Noi'):'Avversari'}</h3><button class="chip ${sb?'on':''}" data-a="bench" data-v="${t}">Panchina</button></div>
   ${on.length?on.map(row).join(''):'<div class="empty">Nessun quintetto in campo. Usa la panchina o imposta i quintetti.</div>'}
@@ -575,13 +590,13 @@ function sheetShot(f){
     return `<div class="row">${show.filter(x=>x!==excl).map(x=>`<button class="chip ${f[k]===x?'on':''}" data-a="sf" data-k="${k}" data-v="${esc(x)}">${esc(lab(x))}</button>`).join('')}${arr.length&&!f['all_'+k]?`<button class="chip" data-a="sf" data-k="all_${k}" data-v="1">Altri…</button>`:''}</div>`};
   const val=f.val||(isThree(f.zone)?3:2);
   const G=(cls,lab,body)=>`<div class="grp sg ${cls}"><div class="lab">${lab}</div>${body}</div>`;
-  const origs=ORIG_NEW.concat(f.orig==='sch'?['sch']:[]);
+  const origs=ORIG_NEW.concat(f.orig&&!ORIG_NEW.includes(f.orig)?[f.orig]:[]);const schs=['Contropiede'].concat((S.settings.schemi||[]).filter(x=>x!=='Contropiede'));
   return `<h3>${f.editId?'Modifica ':''}${N?'Tiro nostro':'Tiro avversario'}: ${ZONES[f.zone][0]} <span class="vtag">${val} pt</span></h3>
   <div class="esito"><button class="big made ${f.made===true?'on':''}" data-a="sf" data-k="made" data-v="1">✓ Segnato</button><button class="big miss ${f.made===false?'on':''}" data-a="sf" data-k="made" data-v="0">✗ Sbagliato</button></div>
   ${G('c-who','Chi tira',list(onOff,allOff,'p',labO))}
   ${G('c-orig','Come nasce',`<div class="row">${origs.map(k=>`<button class="chip ${f.orig===k?'on':''}" data-a="sf" data-k="orig" data-v="${k}">${ORIG[k]}</button>`).join('')}</div>${f.orig==='rim'?'<div class="muted small" style="margin-top:.3rem">Al salvataggio registro anche il rimbalzo offensivo del tiratore.</div>':''}`)}
   ${f.orig==='pass'?G('c-ast','Assist di'+(f.made?'':' (conta solo se segnato)'),list(onOff,allOff,'ast',labO,f.p)):''}
-  ${N?G('c-sch','Schema (anche isolamento: vale con qualsiasi origine)',`<div class="row">${(S.settings.schemi||[]).map(x=>`<button class="chip ${f.sch===x?'on':''}" data-a="sf" data-k="sch" data-v="${esc(x)}">${esc(x)}</button>`).join('')||'<span class="muted small">Aggiungi gli schemi in Squadra.</span>'}</div>`):''}
+  ${N?G('c-sch','Schema o situazione (facoltativo)',`<div class="row">${schs.map(x=>`<button class="chip ${f.sch===x?'on':''}" data-a="sf" data-k="sch" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</div>`):''}
   ${G('c-def',N?'Difensore avversario (facoltativo)':'Nostro difensore',list(onDef,allDef,'dfd',labD))}
   ${G('c-cont','Pressione e fallo',`<div class="row"><button class="chip ${f.cont===false?'on':''}" data-a="sf" data-k="cont" data-v="0">Libero</button><button class="chip ${f.cont===true?'on':''}" data-a="sf" data-k="cont" data-v="1">Contestato</button><button class="chip ${f.fs?'on':''}" data-a="sf" data-k="fs" data-v="1">Fallo subito${f.made?' (and-one)':''}</button></div>`)}
   ${G('c-val','Valore (calcolato dal punto toccato)',`<div class="row"><button class="chip ${val===2?'on':''}" data-a="sf" data-k="val" data-v="2">2 punti</button><button class="chip ${val===3?'on':''}" data-a="sf" data-k="val" data-v="3">3 punti</button></div>`)}
@@ -629,7 +644,7 @@ function viewSquadra(){
 function viewPartite(){
   return `<div class="panel"><div class="row"><h2 class="grow" style="margin:0">Partite e allenamenti</h2><button class="btn" data-a="gNew">Nuova</button></div></div>
   ${S.games.map(g=>`<div class="panel"><div class="row"><div class="grow"><b class="cond" style="font-size:1.2rem">${g.type==='allenamento'?'Allenamento':(g.home?'Casa vs ':'Trasferta @ ')+esc(g.opp||'')}</b><div class="muted small">${g.round?esc(g.round)+' · ':''}${esc(g.date||'')}${g.time?' '+esc(g.time):''} · ${esc(g.type||'partita')}${g.demo?' (prova)':''} · ${esc(g.status||'')}${g.score?` · <b>${g.score.N}–${g.score.A}</b> ${g.score.N>g.score.A?'vinta':'persa'}`:''}${g.qs?`<br>Parziali ${g.qs.map((x,i)=>{const p=g.qs[i-1]||[0,0];return (g.qs.length===2?(i+1)+'° tempo ':qName(i+1)+' ')+(x[0]-p[0])+'–'+(x[1]-p[1])}).join(' · ')}`:''}</div></div>
-  <button class="chip" data-a="gLive" data-v="${g.id}">Apri live</button><button class="chip" data-a="gEdit" data-v="${g.id}">Modifica</button><button class="chip" data-a="gBox" data-v="${g.id}">Dati da scheda</button>${g.status==='finita'?`<button class="chip" style="background:var(--amber);color:#111" data-a="gReport" data-v="${g.id}">Report PDF</button>`:''}<button class="chip" data-a="gDel" data-v="${g.id}" aria-label="Elimina">✕</button></div></div>`).join('')||'<div class="panel empty">Nessuna partita. Crea la prima con Nuova.</div>'}`;
+  <button class="chip" data-a="gLive" data-v="${g.id}">Apri live</button><button class="chip" data-a="gEdit" data-v="${g.id}">Modifica</button><button class="chip" data-a="gReset" data-v="${g.id}">Azzera dati</button><button class="chip" data-a="gBox" data-v="${g.id}">Dati da scheda</button>${g.status==='finita'?`<button class="chip" style="background:var(--amber);color:#111" data-a="gReport" data-v="${g.id}">Report PDF</button>`:''}<button class="chip" data-a="gDel" data-v="${g.id}" aria-label="Elimina">✕</button></div></div>`).join('')||'<div class="panel empty">Nessuna partita. Crea la prima con Nuova.</div>'}`;
 }
 function sheetGame(sh){const g=sh.g||{};
   return `<h3>${g.id?'Modifica':'Nuova'} partita</h3>
@@ -1024,6 +1039,7 @@ document.addEventListener('click',async ev=>{
       if(old)await store.update('games/'+old.id,d);else{const id=store.id();await store.set('games/'+id,{...d,q:1,clk:600,run:null,lnN:[],lnA:[],defN:'uomo',defA:'uomo'});if(d.status==='in corso'){selectGame(id);S.view='live'}}
       S.sheet=null;render();break}
     case'gLive':selectGame(v);S.view='live';render();break;
+    case'gReset':{const gg=S.games.find(x=>x.id===v)||{};S.sheet={type:'confirm',title:'Azzerare i dati di '+(gg.opp||'questa partita')+'?',text:'Cancello eventi, punteggio, tabellino, quintetti e marcature e riporto al 1° quarto, 10:00. Restano data, avversario e numeri avversari. Non si può annullare.',yes:'Azzera',run:async()=>{const evs=await store.list('games/'+v+'/ev');for(const e of evs)await store.del('games/'+v+'/ev/'+e.id);const bx=await store.list('games/'+v+'/box');for(const x of bx)await store.del('games/'+v+'/box/'+x.id);await store.update('games/'+v,{q:1,clk:600,run:null,lnN:[],lnA:[],mm:{},defN:'',defA:'',flip:false,noClock:false,score:null,paper:false,status:'programmata'});try{localStorage.removeItem('ts-redo-'+v)}catch(e){}S.cache={};toast('Partita azzerata')}};renderSheet();break}
     case'gDel':S.sheet={type:'confirm',title:'Eliminare la partita?',text:'Spariscono anche tutti gli eventi e il tabellino. Non si può annullare.',run:async()=>{const evs=await store.list('games/'+v+'/ev');for(const e of evs)await store.del('games/'+v+'/ev/'+e.id);const bx=await store.list('games/'+v+'/box');for(const x of bx)await store.del('games/'+v+'/box/'+x.id);await store.del('games/'+v);if(S.gameId===v)selectGame(null)}};renderSheet();break;
     case'gBox':{const bx=await store.list('games/'+v+'/box');const rows={};bx.forEach(x=>rows[x.id]=x);const gg=S.games.find(x=>x.id===v);S.sheet={type:'box',gid:v,rows,opp:gg&&gg.boxOpp};renderSheet();break}
     case'boxSave':{const sh=S.sheet;readBoxInputs();for(const p of sortedPlayers()){const r=sh.rows[p.id];const has=r&&BOXK.some(([k])=>+r[k]);const path='games/'+sh.gid+'/box/'+p.id;
