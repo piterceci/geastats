@@ -393,13 +393,13 @@ const today=()=>new Date().toISOString().slice(0,10);
 function nextGame(){return S.games.filter(g=>g.type!=='allenamento'&&(g.date||'')>=today()).sort((a,b)=>a.date.localeCompare(b.date))[0]}
 function gamesOrdered(){const t=today();const up=S.games.filter(g=>(g.date||'')>=t).sort((a,b)=>(a.date||'').localeCompare(b.date||''));const past=S.games.filter(g=>(g.date||'')<t).sort((a,b)=>(b.date||'').localeCompare(a.date||''));return up.concat(past)}
 function selectGame(id){
-  S.unsub.forEach(u=>u&&u());S.unsub=[];S.gameId=id;S.game=null;S.ev=[];S.box=[];
+  S.unsub.forEach(u=>u&&u());S.unsub=[];S.gameId=id;S.game=null;S.ev=[];S.evAll=[];S.box=[];
   if(!id){render();return}
   S.unsub.push(store.watchDoc('games/'+id,g=>{S.game=g;render()}));
   selectGame2(id);
 }
 function selectGame2(id){
-  S.unsub.push(store.watch('games/'+id+'/ev',a=>{S.ev=a.sort((x,y)=>x.ts-y.ts);delete S.cache[id];render()}));
+  S.unsub.push(store.watch('games/'+id+'/ev',a=>{S.evAll=a.sort((x,y)=>x.ts-y.ts);S.ev=S.evAll.filter(e=>!e.del);delete S.cache[id];render()}));
   S.unsub.push(store.watch('games/'+id+'/box',a=>{S.box=a;delete S.cache[id];render()}));
 }
 
@@ -558,7 +558,8 @@ function evDesc(e,g){
 }
 const whoName=m=>{if(!m)return'';const u=(S.users||[]).find(x=>x.email===m);if(u&&u.player_id&&pl(u.player_id))return pShort(u.player_id);return m.split('@')[0]};
 function logList(arr,g){if(!arr.length)return'<div class="empty">Ancora nessun evento.</div>';
-  return '<div class="log">'+arr.map(e=>`<div class="it"><span class="tag">${qName(e.q)} ${mmss(e.clk)}</span>${e.by&&POST[e.by]?`<span class="tag" style="opacity:.7">${POST[e.by].n}</span>`:''}<span class="grow small">${evDesc(e,g)}${e.who||e.mod?`<br><span class="muted" style="font-size:.78rem">${e.who?'inserito da '+esc(whoName(e.who)):''}${e.mod?(e.who?' · ':'')+'modificato da '+esc(whoName(e.mod))+' alle '+new Date(e.modTs).toTimeString().slice(0,5):''}</span>`:''}</span><button class="chip" data-a="evEdit" data-v="${e.id}" aria-label="Modifica evento">✎</button><button class="chip" data-a="evDel" data-v="${e.id}" aria-label="Elimina evento">✕</button></div>`).join('')+'</div>'}
+  const hm=t=>new Date(t).toTimeString().slice(0,5);
+  return '<div class="log">'+arr.map(e=>e.del?`<div class="it" style="opacity:.6"><span class="tag">${qName(e.q)} ${mmss(e.clk)}</span><span class="grow small"><s>${evDesc(e,g)}</s><br><span class="koc" style="font-size:.78rem">${e.delUndo?'annullato':'eliminato'} da ${esc(whoName(e.delBy))} alle ${hm(e.delTs)}</span>${e.who?`<span class="muted" style="font-size:.78rem"> · inserito da ${esc(whoName(e.who))}</span>`:''}</span>${can('edit')?`<button class="chip" data-a="evRestore" data-v="${e.id}">Ripristina</button>`:''}</div>`:`<div class="it"><span class="tag">${qName(e.q)} ${mmss(e.clk)}</span>${e.by&&POST[e.by]?`<span class="tag" style="opacity:.7">${POST[e.by].n}</span>`:''}<span class="grow small">${evDesc(e,g)}${e.who||e.mod||e.resBy?`<br><span class="muted" style="font-size:.78rem">${e.who?'inserito da '+esc(whoName(e.who)):''}${e.mod?(e.who?' · ':'')+'modificato da '+esc(whoName(e.mod))+' alle '+new Date(e.modTs).toTimeString().slice(0,5):''}${e.resBy?' · ripristinato da '+esc(whoName(e.resBy)):''}</span>`:''}</span><button class="chip" data-a="evEdit" data-v="${e.id}" aria-label="Modifica evento">✎</button><button class="chip" data-a="evDel" data-v="${e.id}" aria-label="Elimina evento">✕</button></div>`).join('')+'</div>'}
 function liveAnalysis(g){
   const save=S.f;S.f={...save,game:g.id,type:'tutte',home:'tutte',q:S.liveQ||0,player:'squadra'};let R;try{R=compute()}finally{S.f=save}
   const T=R.teamN,A=R.teamA,eN=eff(T),eA=eff(A);
@@ -576,7 +577,7 @@ function advPanel(R){const T=R.teamN,A=R.teamA;const pN=poss(T);if(!pN)return'';
   const k=[['Possessi a gara',r1(pN/R.ngames)],['Rating offensivo',r1(ort)],['Rating difensivo',r1(drt)],['Net rating',(ort-drt>0?'+':'')+r1(ort-drt)],['Palle perse %',fmtP(T.pp/pN)],['Assist su canestri',fmtP(fgm?T.as/fgm:null)],['Quota tiri da 3',fmtP(fga?T.p3a/fga:null)],['Liberi per tiro',fga?((est?T.ftm/0.7:T.fta)/fga).toFixed(2):'–'],['Punti per tiro',fga?(T.pts/fga).toFixed(2):'–']];
   return `<div class="panel"><h3>Indicatori avanzati</h3><div class="kpis">${k.map(([l,v])=>`<div class="kpi"><b>${v}</b><span>${l}</span></div>`).join('')}</div>
   <p class="muted small">Ratings = punti ogni 100 possessi.${hasA?'':' Senza statistiche avversarie il rating difensivo usa i nostri possessi.'}${est?' Liberi tentati stimati dai segnati (70%) dove la scheda non li ha.':''}</p></div>`}
-function liveRegistro(g){return `<div class="panel"><h3>Registro completo</h3>${logList(S.ev.slice().reverse(),g)}</div>`}
+function liveRegistro(g){const nd=(S.evAll||[]).filter(e=>e.del).length;return `<div class="panel"><div class="row"><h3 class="grow" style="margin:0">Registro completo</h3>${nd?`<button class="chip ${S.showDel?'on':''}" data-a="showDel">Eliminati (${nd})</button>`:''}</div>${logList((S.showDel?S.evAll:S.ev).slice().reverse(),g)}</div>`}
 
 /* ---------- scrittura eventi ---------- */
 function baseEv(){const g=S.game;const q=g.q||1;const clk=Math.round(curClock(g));
@@ -700,7 +701,7 @@ async function ensureAnalysisData(){
   if(S.loading)return;const need=selGames().filter(g=>!S.cache[g.id]&&g.id!==S.gameId);if(!need.length)return;
   S.loading=true;
   const to=pr=>Promise.race([pr,new Promise((_,r)=>setTimeout(()=>r({code:'timeout'}),12000))]);
-  await Promise.all(need.map(async g=>{try{const [ev,box]=await Promise.all([to(store.list('games/'+g.id+'/ev')),to(store.list('games/'+g.id+'/box'))]);S.cache[g.id]={ev:ev.concat(g.evPack||[]).sort((a,b)=>a.ts-b.ts),box}}catch(e){S.cache[g.id]={ev:(g.evPack||[]).slice(),box:[],err:1}}}));
+  await Promise.all(need.map(async g=>{try{const [ev,box]=await Promise.all([to(store.list('games/'+g.id+'/ev')),to(store.list('games/'+g.id+'/box'))]);S.cache[g.id]={ev:ev.filter(e=>!e.del).concat(g.evPack||[]).sort((a,b)=>a.ts-b.ts),box}}catch(e){S.cache[g.id]={ev:(g.evPack||[]).slice(),box:[],err:1}}}));
   if(need.some(g=>S.cache[g.id].err))toast('Alcune partite non sono state lette: ricarica la pagina');
   S.loading=false;render();
 }
@@ -1035,7 +1036,7 @@ document.addEventListener('click',async ev=>{
         toast(n>=5?'5° fallo: '+(S.actTeam==='N'?pShort(p):oName(g,p))+' esce':n===4?'Attenzione: 4° fallo per '+(S.actTeam==='N'?pShort(p):oName(g,p)):tq===4?'4 falli di squadra: dal prossimo bonus':'Fallo registrato')}else toast('Registrato');break}
     case'flip':await patchGame({flip:!isFlip()});toast('Campo invertito');break;
     case'post':{S.post=v;try{localStorage.setItem('ts-post',v)}catch(e){}S.tab=v==='pan'?'azioni':'tiri';render();break}
-    case'undo':{const last=myLast();if(!last)break;try{const{id,...d}=last;await store.del('games/'+S.gameId+'/ev/'+id);redoPush(S.gameId,{id,d});toast('Annullato: '+evDesc(last,g).replace(/<[^>]+>/g,''))}catch(e){toast('Non riuscito')}break}
+    case'undo':{const last=myLast();if(!last)break;try{const{id,...d}=last;await store.update('games/'+S.gameId+'/ev/'+id,{del:true,delBy:S.email||'',delTs:Date.now(),delUndo:true});redoPush(S.gameId,{id,d});toast('Annullato: '+evDesc(last,g).replace(/<[^>]+>/g,''))}catch(e){toast('Non riuscito')}break}
     case'redo':{const st=redoGet(S.gameId);const it=st.pop();if(!it)break;redoSet(S.gameId,st);try{await store.set('games/'+S.gameId+'/ev/'+it.id,it.d);toast('Rifatto: '+evDesc(it.d,g).replace(/<[^>]+>/g,''))}catch(e){toast('Non riuscito')}render();break}
     case'noClock':{if(g.run)await patchGame({clk:Math.round(curClock(g)),run:null});await patchGame({noClock:!g.noClock});break}
     case'evEdit':{const e=S.ev.find(x=>x.id===v);if(!e)break;if(e.k==='shot')S.sheet={type:'shot',editId:e.id,team:e.team,x:e.x,y:e.y,zone:e.zone,p:e.p||null,made:e.made??null,orig:e.orig||null,ast:e.ast||null,sch:e.sch||null,cont:e.cont??null,dfd:e.dfd||null,q:e.q};
@@ -1043,7 +1044,9 @@ document.addEventListener('click',async ev=>{
     case'ee':{const f=S.sheet;f[b.dataset.k]=b.dataset.k==='q'?+v:v;renderSheet();break}
     case'eeSave':{const f=S.sheet;await store.update('games/'+S.gameId+'/ev/'+f.editId,{k:f.k,p:f.p,q:f.q,pts:f.k==='ftm'?1:0,mod:S.email||'',modTs:Date.now()});S.sheet=null;renderSheet();toast('Evento modificato');break}
     case'rsort':{const t=S.rs;if(t.k===v)t.d=-t.d;else{t.k=v;t.d=1}render();break}
-    case'evDel':S.sheet={type:'confirm',title:'Eliminare questo evento?',run:()=>store.del('games/'+S.gameId+'/ev/'+v)};renderSheet();break;
+    case'evDel':S.sheet={type:'confirm',title:'Eliminare questo evento?',text:'Resta nel registro barrato, con il tuo nome, e non conta più nelle statistiche. Si può ripristinare.',run:()=>store.update('games/'+S.gameId+'/ev/'+v,{del:true,delBy:S.email||'',delTs:Date.now()})};renderSheet();break;
+    case'showDel':S.showDel=!S.showDel;render();break;
+    case'evRestore':await store.update('games/'+S.gameId+'/ev/'+v,{del:false,resBy:S.email||'',resTs:Date.now()});toast('Evento ripristinato');break;
     case'confirmYes':{const r=S.sheet.run;S.sheet=null;renderSheet();try{await r()}catch(e){toast('Operazione non riuscita')}break}
     case'sheetClose':S.sheet=null;renderSheet();break;
     case'subT':{const s=S.subSel[b.dataset.t][b.dataset.d];const i=s.indexOf(v);if(i>=0)s.splice(i,1);else s.push(v);render();break}
