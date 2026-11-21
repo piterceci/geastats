@@ -89,7 +89,7 @@ body[data-role=player] .noprint button[data-a=fullReport]{display:none}body[data
 .court.att .fl,.fullcourt .att .fl{fill:#d6e4f7}.fullcourt .att .pt{fill:#8fb1e6;opacity:.6}.fullcourt .att .ln{stroke:#2a4a80}.fullcourt .def .fl{fill:#f7dcd6}.fullcourt .def .pt{fill:#e79a8b;opacity:.6}.fullcourt .def .ln{stroke:#8a3324}
 .fullcourt{max-width:none;cursor:crosshair}.fclab{font:600 5px Barlow,sans-serif;text-anchor:middle;fill:#333;opacity:.75;pointer-events:none}.court.att .fl{fill:#d6e4f7}.court.att .pt{fill:#8fb1e6;opacity:.6}.court.att .ln{stroke:#2a4a80}
 .court.def .fl{fill:#f7dcd6}.court.def .pt{fill:#e79a8b;opacity:.6}.court.def .ln{stroke:#8a3324}
-.cols2{display:grid;grid-template-columns:1fr;gap:.8rem}
+.cols2{display:grid;grid-template-columns:minmax(0,1fr);gap:.8rem}
 @media (min-width:700px){.cols2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 .cols2 .acts button{min-width:40px;min-height:44px;font-size:.74rem;padding:0 .3rem}
 .cols2 .prow{grid-template-columns:5.6rem 1fr}
@@ -99,7 +99,7 @@ body[data-role=player] .noprint button[data-a=fullReport]{display:none}body[data
 .dotx{stroke:var(--miss);stroke-width:1.1}
 .zl{font:700 4.2px "Barlow Condensed",sans-serif;text-anchor:middle;dominant-baseline:middle;fill:#fff;pointer-events:none}
 .zs{font:500 2.9px Barlow,sans-serif;text-anchor:middle;fill:#fff;pointer-events:none}
-.layout2{display:grid;grid-template-columns:1fr;gap:.8rem}
+.layout2{display:grid;grid-template-columns:minmax(0,1fr);gap:.8rem}
 @media (min-width:900px){.layout2{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}}
 /* azioni */
 .prow{display:grid;grid-template-columns:7.5rem 1fr;gap:.4rem;align-items:center;padding:.35rem 0;border-bottom:1px solid var(--line)}
@@ -108,7 +108,9 @@ body[data-role=player] .noprint button[data-a=fullReport]{display:none}body[data
 .acts button{min-width:58px;min-height:52px;border-radius:8px;border:1px solid var(--line);background:var(--chip);font-weight:600;font-size:.9rem}
 .acts .g{color:var(--made)} .acts .r{color:var(--miss)}
 /* tabelle */
-.tw{overflow-x:auto}
+.tw{overflow-x:auto;max-width:100%}
+.panel,.cols2>*,.layout2>*{min-width:0}
+main{overflow-x:clip}
 table{border-collapse:collapse;width:100%;font-size:.92rem;font-variant-numeric:tabular-nums}
 th[title],.kpi span[title]{cursor:help;text-decoration:underline dotted;text-underline-offset:3px}
 th,td{padding:.38rem .45rem;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -197,6 +199,9 @@ html.lock,html.lock body{overflow:hidden;overscroll-behavior:none}
 .postrow .pst-dif{background:#e79a8b;color:#0e1420;border-color:#e79a8b}
 .postrow .pst-pan{background:#5b6475;color:#fff;border-color:#5b6475}
 .postrow .chip{opacity:.6}.postrow .chip.on{opacity:1;box-shadow:0 0 0 3px #fff inset}
+
+.postrow,.tabs{display:grid!important;grid-auto-flow:column;grid-auto-columns:1fr;gap:.35rem}
+.postrow .chip,.tabs .chip{width:100%;padding:.45rem .1rem;font-size:.92rem;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media print{.top,.noprint{display:none!important}body{background:#fff}.panel{border:0;break-inside:avoid}body.print-report .layout2{grid-template-columns:1fr 1fr}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -296,8 +301,9 @@ function curClock(g){if(!g)return 600;const rem=g.clk??qlen(g.q||1);return g.run
 /* ---------- avvio ---------- */
 /* ---------- Supabase ---------- */
 const SB=window.supabase.createClient(window.GEA_CONFIG.url,window.GEA_CONFIG.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-const ROLE_NAME={super:'Superuser',coach:'Allenatore',game:'Partita',player:'Giocatore'};
-const can=w=>({edit:['super','coach'],game:['super','coach','game'],users:['super']}[w]||[]).includes(S.role);
+const ROLE_NAME={super:'Superuser',coach:'Allenatore',game:'Partita',player:'Giocatore',playergame:'Giocatore + partita'};
+const isPl=()=>S.role==='player'||S.role==='playergame';
+const can=w=>({edit:['super','coach'],game:['super','coach','game','playergame'],users:['super']}[w]||[]).includes(S.role);
 function makeDb(){
   const parentOf=p=>p.slice(0,p.lastIndexOf('/')),leaf=p=>p.slice(p.lastIndexOf('/')+1);
   const colW=new Map(),docW=new Map();
@@ -358,7 +364,7 @@ async function startApp(){
   if(!me){const {data:ok}=await SB.rpc('claim_first_super');if(ok){({data:me}=await SB.from('app_users').select('role,player_id').eq('email',S.email.toLowerCase()).maybeSingle())}}
   if(!me){$('#main').innerHTML=`<div class="panel" style="max-width:460px;margin:2rem auto"><h2 style="margin-top:0">Accesso non abilitato</h2><p>La mail ${esc(S.email)} non è tra quelle abilitate. Chiedi allo staff di aggiungerla.</p><button class="btn ghost" data-a="logout">Esci</button></div>`;return}
   S.role=me.role;S.myPlayer=me.player_id||null;
-  if(S.role==='player'){S.view='analisi';if(S.myPlayer)S.f.player=S.myPlayer}
+  if(isPl()){S.view='analisi';if(S.myPlayer)S.f.player=S.myPlayer}
   else if(S.role==='game')S.view='live';
   if(S.started)return;S.started=true;
   store.setDb(makeDb());
@@ -395,7 +401,7 @@ function selectGame2(id){
 function renderNav(){
   if(!S.role)return;
   const all=[['live','Partita'],['analisi','Analisi'],['tabella','Statistiche'],['partite','Partite'],['squadra','Squadra'],['utenti','Utenti']];
-  const ok={super:['live','analisi','tabella','partite','squadra','utenti'],coach:['live','analisi','tabella','partite','squadra'],game:['live'],player:['analisi','tabella']}[S.role]||[];
+  const ok={super:['live','analisi','tabella','partite','squadra','utenti'],coach:['live','analisi','tabella','partite','squadra'],game:['live'],player:['analisi','tabella'],playergame:['live','analisi','tabella']}[S.role]||[];
   const v=all.filter(x=>ok.includes(x[0]));if(!ok.includes(S.view))S.view=ok[0];
   $('#nav').innerHTML='<span class="brand">Team Stats</span>'+v.map(([k,l])=>`<button data-a="nav" data-v="${k}" class="${S.view===k?'on':''}">${l}</button>`).join('')+`<span style="margin-left:auto;display:flex;align-items:center;gap:.5rem;color:#aab4c6;font-size:.85rem;white-space:nowrap;padding-right:.5rem">${esc(ROLE_NAME[S.role]||'')}<button data-a="logout" style="color:#fff;border:1px solid #445;border-radius:6px;padding:.3rem .6rem;font:inherit;background:none">Esci</button></span>`;
 }
@@ -414,7 +420,7 @@ function render(){
   const keep=document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.keep;
   if(keep)return; // non ridisegnare mentre si scrive
   let h='';
-  if(S.role==='player'&&S.view==='analisi'&&S.myPlayer&&S.f.player!==S.myPlayer)h+=`<div class="row noprint" style="margin-bottom:.6rem"><button class="btn ghost" data-a="pick" data-v="${S.myPlayer}">Torna alla mia scheda</button></div>`;
+  if(isPl()&&S.view==='analisi'&&S.myPlayer&&S.f.player!==S.myPlayer)h+=`<div class="row noprint" style="margin-bottom:.6rem"><button class="btn ghost" data-a="pick" data-v="${S.myPlayer}">Torna alla mia scheda</button></div>`;
   if(false)h+=`<div class="warn noprint" style="margin-bottom:.7rem"><b>Non vedi i dati della squadra.</b> Accedi a claude.ai (pulsante Accedi in alto) con un account che ha accesso a questa app, poi ricarica la pagina. Quello che inserisci ora resta solo su questo dispositivo.</div>`;
   if(S.view==='live')h+=viewLive();
   else if(S.view==='analisi')h+=viewAnalisi();
@@ -484,10 +490,10 @@ function viewLive(){
   <div class="qbar">${['N','A'].map(t=>{const u=toUsed(t,q),mx=toMax(q);return `<button data-a="to" data-v="${t}" title="Registra un time-out ${t==='N'?'nostro':'avversario'}" style="${u>=mx?'opacity:.5':''}">TO ${t==='N'?'noi':'avv'} ${u}/${mx}</button>`}).join('')}</div></div>
   <div class="right"><div class="t">${esc(g.type==='allenamento'?(g.opp||'Squadra B'):(g.opp||'Avversari'))}</div><div class="s">${sc.A}</div><div class="fouls">Falli ${qName(q)}: ${tf('A')}/4${tf('N')>=4?' <span class="bonus" title="Abbiamo 4 falli nel periodo: ogni fallo vale tiri liberi per loro">BONUS</span>':''}</div></div></div>`;
   h+=`<div class="urbar noprint"><button class="btn danger" data-a="undo" ${myLast()?'':'disabled style="opacity:.5"'}>↶ Annulla</button><button class="btn redo" data-a="redo" ${redoGet(S.gameId).length?'':'disabled style="opacity:.5"'}>↷ Rifai (${redoGet(S.gameId).length})</button></div>`;
-  if(!g.noClock&&(!S.post||['pan','tutto'].includes(S.post)))h+=`<button class="btn bigclk noprint ${g.run?'stop':'go'}" data-a="clk">${g.run?'■ Stop cronometro':'▶ Start cronometro'}</button>`;
+  if(!g.noClock)h+=`<button class="btn bigclk noprint ${g.run?'stop':'go'}" data-a="clk">${g.run?'■ Stop cronometro':'▶ Start cronometro'}</button>`;
   h+=`<div class="row noprint postrow" style="margin-bottom:.5rem;gap:.3rem">${Object.entries(POST).map(([k,o])=>`<button class="chip pst-${k} ${S.post===k?'on':''}" data-a="post" data-v="${k}" title="${o.d}">${o.n}</button>`).join('')}</div>`;
   if(!S.post){h+=`<div class="panel"><h3 style="margin-top:0">Scegli la tua postazione</h3><p class="small">Con tre persone ognuna sceglie la sua sul proprio dispositivo: i dati si uniscono da soli.</p>${Object.entries(POST).map(([k,o])=>`<button class="btn" style="display:block;width:100%;text-align:left;margin:.4rem 0" data-a="post" data-v="${k}"><b>${o.n}</b><br><span style="font-weight:400;font-size:.9rem">${o.d}</span></button>`).join('')}</div>`;return h}
-  const TABS=S.post==='att'?[['tiri','Tiri'],['registro','Registro'],['live','Analisi live']]:S.post==='dif'?[['tiri','Tiri'],['azioni','Falli e liberi'],['cambi','Marcature'],['registro','Registro']]:S.post==='pan'?[['azioni','Azioni'],['cambi','Cambi'],['registro','Registro'],['live','Analisi live']]:[['tiri','Tiri'],['azioni','Azioni'],['cambi','Cambi e difese'],['registro','Registro'],['live','Analisi live']];
+  const TABS=S.post==='att'?[['tiri','Tiri'],['registro','Registro'],['live','Live']]:S.post==='dif'?[['tiri','Tiri'],['azioni','Falli'],['cambi','Marcat.'],['registro','Registro']]:S.post==='pan'?[['azioni','Azioni'],['cambi','Cambi'],['registro','Registro'],['live','Live']]:[['tiri','Tiri'],['azioni','Azioni'],['cambi','Cambi'],['registro','Registro'],['live','Live']];
   if(!TABS.some(t=>t[0]===S.tab))S.tab=TABS[0][0];
   h+=`<div class="tabs noprint">${TABS.map(([k,l],i)=>`<button class="chip ${S.tab===k?'on':''}" data-a="tab" data-v="${k}" title="Scorciatoia: ⌘/Ctrl/Alt + ${i+1}">${l}<span class="kbd">${i+1}</span></button>`).join('')}</div>`;
   if(!(g.lnN||[]).length&&S.tab!=='cambi'&&S.tab!=='registro')h+=`<div class="warn" style="margin-bottom:.6rem">Imposta i quintetti in Cambi e difese: servono per minuti, +/- e quintetti.</div>`;
@@ -632,7 +638,7 @@ function viewUtenti(){
   const popt=cur=>'<option value="">–</option>'+sortedPlayers().map(p=>`<option value="${p.id}" ${cur===p.id?'selected':''}>${esc(pName(p.id))}</option>`).join('');
   return `<div class="panel"><h2 style="margin-top:0">Utenti abilitati</h2><p class="muted small">Solo le mail in questa lista possono entrare. Dopo averla aggiunta, la persona apre il sito, sceglie "Primo accesso" e crea la sua password. Per i giocatori collega il nome: entrando vedranno subito la loro scheda.</p>
   <div class="tw"><table><thead><tr><th>Email</th><th>Ruolo</th><th>Giocatore</th><th></th></tr></thead><tbody>
-  ${S.users.map(u=>`<tr><td>${esc(u.email)}</td><td><select data-keep="1" data-ur="${esc(u.email)}">${opt(0,u.role)}</select></td><td>${u.role==='player'?`<select data-keep="1" data-up="${esc(u.email)}">${popt(u.player_id)}</select>`:''}</td><td>${u.email===S.email.toLowerCase()?'':`<button class="chip" data-a="uDel" data-v="${esc(u.email)}">✕</button>`}</td></tr>`).join('')}
+  ${S.users.map(u=>`<tr><td>${esc(u.email)}</td><td><select data-keep="1" data-ur="${esc(u.email)}">${opt(0,u.role)}</select></td><td>${u.role==='player'||u.role==='playergame'?`<select data-keep="1" data-up="${esc(u.email)}">${popt(u.player_id)}</select>`:''}</td><td>${u.email===S.email.toLowerCase()?'':`<button class="chip" data-a="uDel" data-v="${esc(u.email)}">✕</button>`}</td></tr>`).join('')}
   </tbody></table></div>
   <div class="row" style="margin-top:.7rem"><input type="email" id="nu_mail" data-keep="1" placeholder="email" class="grow"><select id="nu_role" data-keep="1">${opt(0,'player')}</select><select id="nu_pl" data-keep="1">${popt('')}</select><button class="btn" data-a="uAdd">Aggiungi</button></div>
   <div class="row" style="margin-top:1rem"><label class="btn ghost" style="display:inline-flex;align-items:center">Importa dati da Claude (file .json)<input type="file" accept=".json,application/json" id="impjson" data-keep="1" hidden></label></div>
@@ -997,7 +1003,7 @@ document.addEventListener('click',async ev=>{
     case'to':{const q=g.q||1;if(toUsed(v,q)>=toMax(q))toast('Time-out finiti per questo periodo');await addEv({...baseEv(),k:'to',team:v,p:''});clockStop();toast('Time-out '+(v==='N'?'nostro':'avversario'));break}
     case'liveQ':S.liveQ=+v;render();break;
     case'printReport':document.body.classList.add('print-report');setTimeout(()=>{try{window.print()}catch(e){toast('Stampa non disponibile qui: usa Scarica scheda')}setTimeout(()=>document.body.classList.remove('print-report'),500)},50);break;
-    case'clk':if(S.post&&!['pan','tutto'].includes(S.post)){toast('Il cronometro lo gestisce la postazione Panchina');break}if(g.run)clockStop();else patchGame({run:Date.now(),clk:Math.round(curClock(g))});break;
+    case'clk':if(g.run)clockStop();else patchGame({run:Date.now(),clk:Math.round(curClock(g))});break;
     case'clkEdit':S.sheet={type:'clock'};renderSheet();break;
     case'clkQuick':{await patchGame({clk:Math.min(qlen(g.q||1),+v),run:g.run?Date.now():null});S.sheet=null;renderSheet();toast('Tempo impostato a '+mmss(+v));break}
     case'clkSet':{const m=($('#clkin').value||'').trim().match(/^(\d{1,2})(?::(\d{1,2}))?$/);if(!m){toast('Usa il formato mm:ss');break}
