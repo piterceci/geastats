@@ -86,9 +86,9 @@ body[data-role=player] .noprint button[data-a=fullReport]{display:none}body[data
 /* campo */
 .court{width:100%;max-width:620px;display:block;margin:0 auto;touch-action:manipulation;border-radius:8px}
 .court .fl{fill:var(--wood)}
-.court.att .fl,.fullcourt .att .fl{fill:#d6e4f7}.fullcourt .att .pt{fill:#8fb1e6;opacity:.6}.fullcourt .att .ln{stroke:#2a4a80}.fullcourt .def .fl{fill:#f7dcd6}.fullcourt .def .pt{fill:#e79a8b;opacity:.6}.fullcourt .def .ln{stroke:#8a3324}
-.fullcourt{max-width:none;cursor:crosshair}.fclab{font:600 5px Barlow,sans-serif;text-anchor:middle;fill:#333;opacity:.75;pointer-events:none}.court.att .fl{fill:#d6e4f7}.court.att .pt{fill:#8fb1e6;opacity:.6}.court.att .ln{stroke:#2a4a80}
-.court.def .fl{fill:#f7dcd6}.court.def .pt{fill:#e79a8b;opacity:.6}.court.def .ln{stroke:#8a3324}
+.court.att .fl,.fullcourt .att .fl{fill:#a9c8f2}.fullcourt .att .pt{fill:#2f6fd6;opacity:.55}.fullcourt .att .ln{stroke:#2a4a80}.fullcourt .def .fl{fill:#f4b3ab}.fullcourt .def .pt{fill:#d6455a;opacity:.55}.fullcourt .def .ln{stroke:#8a3324}
+.fullcourt{max-width:none;cursor:crosshair}.fclab{font:600 5px Barlow,sans-serif;text-anchor:middle;fill:#333;opacity:.75;pointer-events:none}.court.att .fl{fill:#a9c8f2}.court.att .pt{fill:#2f6fd6;opacity:.55}.court.att .ln{stroke:#2a4a80}
+.court.def .fl{fill:#f4b3ab}.court.def .pt{fill:#d6455a;opacity:.55}.court.def .ln{stroke:#8a3324}
 .cols2{display:grid;grid-template-columns:minmax(0,1fr);gap:.8rem}
 @media (min-width:700px){.cols2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 .cols2 .acts button{min-width:40px;min-height:44px;font-size:.74rem;padding:0 .3rem}
@@ -203,6 +203,16 @@ html.lock,html.lock body{overflow:hidden;overscroll-behavior:none}
 .postrow,.tabs{display:grid!important;grid-auto-flow:column;grid-auto-columns:1fr;gap:.35rem}
 .postrow .chip,.tabs .chip{width:100%;padding:.45rem .1rem;font-size:.92rem;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ucard{border:1px solid var(--line);border-radius:10px;padding:.6rem;margin:.5rem 0}.ucard .um{font-weight:700;margin-bottom:.35rem;word-break:break-all}
+
+.acts button.a-ok{background:var(--made)!important}.acts button.a-ko{background:var(--miss)!important}
+.acts button.a-ok2{background:#9be37a!important;color:#0e1420!important}
+.postrow .chip{opacity:1!important;font-weight:700}
+.postrow .pst-att{background:#2f6fd6!important;color:#fff!important;border-color:#2f6fd6!important}
+.postrow .pst-dif{background:#d6455a!important;color:#fff!important;border-color:#d6455a!important}
+.postrow .pst-pan{background:#6b7385!important;color:#fff!important;border-color:#6b7385!important}
+.postrow .pst-tutto{background:#b8860b!important;color:#fff!important;border-color:#b8860b!important}
+.postrow .chip:not(.on){filter:saturate(.55) brightness(.75)}
+.postrow .chip.on{box-shadow:0 0 0 3px #fff inset}
 @media print{.top,.noprint{display:none!important}body{background:#fff}.panel{border:0;break-inside:avoid}body.print-report .layout2{grid-template-columns:1fr 1fr}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -542,7 +552,7 @@ function liveCambi(g){
     <div class="grp"><div class="lab">${t==='N'?'Nostra difesa':'Difesa avversaria'}</div><div class="row">${defList().map(d=>`<button class="chip ${(t==='N'?g.defN:g.defA)===d?'on':''}" data-a="def" data-t="${t}" data-v="${esc(d)}">${esc(d)}</button>`).join('')||'<span class="muted small">Nessuno schema difensivo: aggiungili in Squadra.</span>'}</div></div></div>`};
   const mm=g.mm||{};const inv={};for(const o in mm)inv[mm[o]]=o;const opp=oppRoster(g).map(o=>o.n);
   const mmPanel=`<div class="panel"><h3>Marcature (difesa a uomo)</h3><p class="muted small">Per ogni nostro giocatore in campo scegli l'avversario che marca. Quando registri un tiro di quell'avversario, il difensore è già selezionato.</p>
-  ${!(g.lnN||[]).length?'<p class="warn">Imposta prima il nostro quintetto.</p>':!opp.length?'<p class="warn">Aggiungi i numeri avversari (riquadro Avversari qui sotto).</p>':(g.lnN||[]).map(pid=>`<div class="row" style="margin:.3rem 0"><span style="min-width:9rem;font-weight:600">${esc(pShort(pid))}</span><span class="muted">marca</span><select data-mmour="${pid}" class="grow"><option value="">–</option>${opp.map(n=>`<option value="${esc(n)}" ${inv[pid]===n?'selected':''}>${esc(oName(g,n))}${(g.lnA||[]).includes(n)?'':' (in panchina)'}</option>`).join('')}</select></div>`).join('')}</div>`;
+  ${!(g.lnN||[]).length?'<p class="warn">Imposta prima il nostro quintetto.</p>':!opp.length?'<p class="warn">Aggiungi i numeri avversari (riquadro Avversari qui sotto).</p>':(g.lnN||[]).slice().sort((a,b)=>numOf('N',a)-numOf('N',b)).map(pid=>`<div class="row" style="margin:.3rem 0"><span style="min-width:9rem;font-weight:600">${esc(pShort(pid))}</span><span class="muted">marca</span><select data-mmour="${pid}" class="grow"><option value="">–</option>${opp.map(n=>`<option value="${esc(n)}" ${inv[pid]===n?'selected':''}>${esc(oName(g,n))}${(g.lnA||[]).includes(n)?'':' (in panchina)'}</option>`).join('')}</select></div>`).join('')}</div>`;
   if(S.post==='dif')return mmPanel+part('A');
   return `<div class="layout2">${part('N')}${part('A')}</div>`+mmPanel;
 }
@@ -615,7 +625,7 @@ function sheetShot(f){
   const onOff=N?(g.lnN||[]):(g.lnA||[]);const allOff=N?sortedPlayers().map(p=>p.id):oppRoster(g).map(o=>o.n);
   const onDef=N?(g.lnA||[]):(g.lnN||[]);const allDef=N?oppRoster(g).map(o=>o.n):sortedPlayers().map(p=>p.id);
   const labO=x=>N?pShort(x):oName(g,x),labD=x=>N?oName(g,x):pShort(x);
-  const list=(arr,all,k,lab,excl)=>{const show=f['all_'+k]?all:(arr.length?arr:all);
+  const list=(arr,all,k,lab,excl)=>{const tt=(k==='dfd')===N?'A':'N';const show=(f['all_'+k]?all:(arr.length?arr:all)).slice().sort((a,b)=>numOf(tt,a)-numOf(tt,b));
     return `<div class="row">${show.filter(x=>x!==excl).map(x=>`<button class="chip ${f[k]===x?'on':''}" data-a="sf" data-k="${k}" data-v="${esc(x)}">${esc(lab(x))}</button>`).join('')}${arr.length&&!f['all_'+k]?`<button class="chip" data-a="sf" data-k="all_${k}" data-v="1">Altri…</button>`:''}</div>`};
   const val=f.val||(isThree(f.zone)?3:2);
   const G=(cls,lab,body)=>`<div class="grp sg ${cls}"><div class="lab">${lab}</div>${body}</div>`;
